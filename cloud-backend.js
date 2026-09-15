@@ -6,31 +6,40 @@ export async function createCloudBackend(config){
     auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
   });
 
-  const getIdentity=async()=>{
-    const {data:{session}}=await client.auth.getSession();
-    if(!session)return {user:null,isAdmin:false};
-    const [{data:profile,error:profileError},{data:isAdmin,error:adminError}]=await Promise.all([
-      client.from('profiles').select('role,display_name').eq('id',session.user.id).maybeSingle(),
-      client.rpc('is_admin')
-    ]);
-    if(profileError)throw profileError;
-    if(adminError)throw adminError;
-    return {user:session.user,profile:profile||null,isAdmin:isAdmin===true||profile?.role==='admin'};
+  const getIdentity=async(userOverride=null)=>{
+    let user=userOverride;
+    if(!user){
+      const {data,error}=await client.auth.getUser();
+      if(error&&!error.message?.includes('Auth session missing'))throw error;
+      user=data?.user||null;
+    }
+    if(!user)return {user:null,profile:null,isAdmin:false};
+    const {data:profiles,error}=await client.from('profiles').select('role,display_name').eq('id',user.id).limit(1);
+    if(error)throw error;
+    const profile=profiles?.[0]||null;
+    return {user,profile,isAdmin:profile?.role==='admin'};
   };
 
   const load=async()=>{
-    const [playersResult,seasonsResult,gamesResult]=await Promise.all([
+    const [playersResult,seasonsResult,gamesResult,resultsResult]=await Promise.all([
       client.from('players').select('*').order('joined_at'),
       client.from('seasons').select('*').order('starts_on',{ascending:false}),
-      client.from('games').select('id,played_at,event_name,season_id,seasons(code),game_results(player_id,points)').order('played_at')
+      client.from('games').select('id,played_at,event_name,season_id').order('played_at'),
+      client.from('game_results').select('game_id,player_id,points')
     ]);
-    for(const result of [playersResult,seasonsResult,gamesResult])if(result.error)throw result.error;
+    for(const result of [playersResult,seasonsResult,gamesResult,resultsResult])if(result.error)throw result.error;
+    const seasonCodeById=new Map(seasonsResult.data.map(season=>[season.id,season.code]));
+    const scoresByGame=new Map();
+    for(const result of resultsResult.data){
+      if(!scoresByGame.has(result.game_id))scoresByGame.set(result.game_id,{});
+      scoresByGame.get(result.game_id)[result.player_id]=result.points;
+    }
     return {
       players:playersResult.data.map(player=>({id:player.id,name:player.name,tagline:player.tagline,color:player.color,avatar:player.avatar_url,joined:player.joined_at})),
       seasons:seasonsResult.data.map(season=>({id:season.id,code:season.code,name:season.name,active:season.is_active})),
-      games:gamesResult.data.filter(game=>game.seasons).map(game=>({
-        id:game.id,date:game.played_at,event:game.event_name,season:game.seasons.code,
-        scores:Object.fromEntries((game.game_results||[]).map(result=>[result.player_id,result.points]))
+      games:gamesResult.data.filter(game=>seasonCodeById.has(game.season_id)).map(game=>({
+        id:game.id,date:game.played_at,event:game.event_name,season:seasonCodeById.get(game.season_id),
+        scores:scoresByGame.get(game.id)||{}
       }))
     };
   };
@@ -60,17 +69,17 @@ export async function createCloudBackend(config){
   };
 
   const signIn=async(email,password)=>{
-    const {error}=await client.auth.signInWithPassword({email,password});
+    const {data,error}=await client.auth.signInWithPassword({email,password});
     if(error)throw error;
-    return getIdentity();
+    return getIdentity(data?.user||null);
   };
   const signOut=async()=>{const {error}=await client.auth.signOut();if(error)throw error};
   const subscribe=onChange=>{
     let timer;
     const channel=client.channel('tnb-live')
-      .on('postgres_changes',{event:'*',schema:'public',table:'players'},()=>{clearTimeout(timer);timer=setTimeout(onChange,250)})
-      .on('postgres_changes',{event:'*',schema:'public',table:'games'},()=>{clearTimeout(timer);timer=setTimeout(onChange,250)})
-      .on('postgres_changes',{event:'*',schema:'public',table:'game_results'},()=>{clearTimeout(timer);timer=setTimeout(onChange,250)})
+      .on('postgres_changes',{event:'*',schema:'public',table:'players'},()=>{clearTimeout(timer);timer=setTimeout(onChange,700)})
+      .on('postgres_changes',{event:'*',schema:'public',table:'games'},()=>{clearTimeout(timer);timer=setTimeout(onChange,700)})
+      .on('postgres_changes',{event:'*',schema:'public',table:'game_results'},()=>{clearTimeout(timer);timer=setTimeout(onChange,700)})
       .subscribe();
     return ()=>client.removeChannel(channel);
   };

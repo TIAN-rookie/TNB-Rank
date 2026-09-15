@@ -17,6 +17,7 @@ const seedGames = [
   {id:6,date:'2026-09-07',event:'周末常规赛',scores:{1:260,2:-210,3:440,4:-80,5:190,6:-230,7:-120,8:-250}}
 ];
 const storeKey='wpt-rank-mvp-v1';
+const APP_VERSION='v2026.09.16.3';
 const defaultSeasons=[
   {code:'2026-S3',name:'2026 第 3 赛季',active:true},
   {code:'2026-S2',name:'2026 第 2 赛季',active:false},
@@ -83,11 +84,11 @@ function renderChampion(){
   $('#championCard').innerHTML=p&&p.played?`<div class="champion-label"><span>CURRENT CHAMPION</span><span>♛</span></div><div class="portrait" style="background:${p.color}">${p.avatar?`<img src="${p.avatar}" alt="${p.name} 的头像">`:initials(p.name)}</div><h3>${p.name}</h3><p>${p.tagline||'本赛季领跑者'}</p><div class="champion-score"><strong>${format(p.points)}</strong><span>${activeSeason==='all'?'生涯':'赛季'}总积分</span></div><div class="champion-mini"><div><strong>${p.attendance}%</strong><span>出勤率</span></div><div><strong>${p.winRate}%</strong><span>胜率</span></div><div><strong>${p.played}</strong><span>参赛场次</span></div></div>`:'<div class="champion-label"><span>CURRENT CHAMPION</span><span>♛</span></div><p class="empty-record">该赛季尚未产生冠军</p>';
 }
 function renderRecords(){
-  const entries=seasonGames().flatMap(g=>Object.entries(g.scores).map(([id,score])=>({player:state.players.find(p=>p.id===Number(id)),score:Number(score),date:g.date,event:g.event}))).filter(x=>x.player);
-  const uniqueTop=(sorter)=>{const used=new Set();return [...entries].sort(sorter).filter(x=>!used.has(x.player.id)&&used.add(x.player.id)).slice(0,3)};
+  const entries=seasonGames().flatMap(g=>Object.entries(g.scores).map(([id,score])=>({player:state.players.find(p=>String(p.id)===String(id)),score:Number(score),date:g.date,event:g.event}))).filter(x=>x.player);
+  const topThree=sorter=>[...entries].sort(sorter).slice(0,3);
   const item=(x,i)=>`<div class="record-item"><span class="medal">${['Ⅰ','Ⅱ','Ⅲ'][i]}</span><div class="record-person">${avatar(x.player)}<div><strong>${x.player.name}</strong><span>${x.date} · ${x.event}</span></div></div><div class="record-points"><strong>${x.score>0?'+':''}${format(x.score)}</strong><span>积分</span></div></div>`;
-  $('#highRecords').innerHTML=uniqueTop((a,b)=>b.score-a.score).map(item).join('')||'<div class="empty-record">该赛季暂无纪录</div>';
-  $('#lowRecords').innerHTML=uniqueTop((a,b)=>a.score-b.score).map(item).join('')||'<div class="empty-record">该赛季暂无纪录</div>';
+  $('#highRecords').innerHTML=topThree((a,b)=>b.score-a.score).map(item).join('')||'<div class="empty-record">该赛季暂无纪录</div>';
+  $('#lowRecords').innerHTML=topThree((a,b)=>a.score-b.score).map(item).join('')||'<div class="empty-record">该赛季暂无纪录</div>';
 }
 function renderPlayers(){
   const career=state.players.map(player=>statsFor(player,state.games)).sort((a,b)=>b.points-a.points);
@@ -97,7 +98,7 @@ function renderResultInputs(){
   $('#resultInputs').innerHTML=state.players.map(p=>`<div class="result-row"><label><input type="checkbox" name="selected" value="${p.id}"> ${avatar(p)} ${p.name}</label><input type="number" name="score-${p.id}" placeholder="输入积分" step="10"></div>`).join('');
 }
 function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('toast-show');setTimeout(()=>el.classList.remove('toast-show'),2400)}
-function setConnection(text,type=''){$('#connectionBadge').textContent=text;$('#connectionBadge').className=`connection-badge ${type}`}
+function setConnection(text,type=''){$('#connectionBadge').textContent=`${text} · ${APP_VERSION}`;$('#connectionBadge').title=`TNB Rank ${APP_VERSION}`;$('#connectionBadge').className=`connection-badge ${type}`}
 function compressAvatar(file){
   return new Promise((resolve,reject)=>{
     if(!file.type.startsWith('image/'))return reject(new Error('请选择图片文件'));
@@ -182,7 +183,7 @@ async function initialize(){
   if(!cloudMode){backend=localBackend;save();setConnection('本地演示');render();return}
   setConnection('正在连接…');
   try{
-    const {createCloudBackend}=await import('./cloud-backend.js');
+    const {createCloudBackend}=await import('./cloud-backend.js?v=20260916-3');
     backend=await createCloudBackend(config);identity=await backend.getIdentity();
     await reloadData();backend.subscribe(()=>reloadData(true));
     backend.onAuthChange(()=>setTimeout(async()=>{try{identity=await backend.getIdentity()}catch{identity={user:null,isAdmin:false}}renderAccess()},0));
