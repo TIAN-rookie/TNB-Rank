@@ -9,9 +9,13 @@ export async function createCloudBackend(config){
   const getIdentity=async()=>{
     const {data:{session}}=await client.auth.getSession();
     if(!session)return {user:null,isAdmin:false};
-    const {data:profile,error}=await client.from('profiles').select('role,display_name').eq('id',session.user.id).single();
-    if(error)throw error;
-    return {user:session.user,profile,isAdmin:profile.role==='admin'};
+    const [{data:profile,error:profileError},{data:isAdmin,error:adminError}]=await Promise.all([
+      client.from('profiles').select('role,display_name').eq('id',session.user.id).maybeSingle(),
+      client.rpc('is_admin')
+    ]);
+    if(profileError)throw profileError;
+    if(adminError)throw adminError;
+    return {user:session.user,profile:profile||null,isAdmin:isAdmin===true||profile?.role==='admin'};
   };
 
   const load=async()=>{
@@ -24,9 +28,9 @@ export async function createCloudBackend(config){
     return {
       players:playersResult.data.map(player=>({id:player.id,name:player.name,tagline:player.tagline,color:player.color,avatar:player.avatar_url,joined:player.joined_at})),
       seasons:seasonsResult.data.map(season=>({id:season.id,code:season.code,name:season.name,active:season.is_active})),
-      games:gamesResult.data.map(game=>({
+      games:gamesResult.data.filter(game=>game.seasons).map(game=>({
         id:game.id,date:game.played_at,event:game.event_name,season:game.seasons.code,
-        scores:Object.fromEntries(game.game_results.map(result=>[result.player_id,result.points]))
+        scores:Object.fromEntries((game.game_results||[]).map(result=>[result.player_id,result.points]))
       }))
     };
   };

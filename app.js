@@ -113,7 +113,7 @@ function compressAvatar(file){
   });
 }
 document.querySelectorAll('[data-open]').forEach(btn=>btn.addEventListener('click',()=>$('#'+btn.dataset.open).showModal()));
-document.querySelectorAll('.close').forEach(btn=>btn.addEventListener('click',()=>btn.closest('dialog').close()));
+document.querySelectorAll('.close').forEach(btn=>btn.addEventListener('click',()=>{btn.closest('dialog').close();const error=btn.closest('dialog').querySelector('.form-error');if(error)error.hidden=true}));
 document.querySelectorAll('dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d)d.close()}));
 $('#playerSearch').addEventListener('input',renderLeaderboard);
 $('#showAllBtn').addEventListener('click',()=>{expanded=!expanded;renderLeaderboard()});
@@ -123,18 +123,19 @@ $('#avatarInput').addEventListener('change',async e=>{
   try{pendingAvatar=await compressAvatar(file);$('#avatarPreview').innerHTML=`<img src="${pendingAvatar}" alt="头像预览">`}catch(error){e.target.value='';pendingAvatar='';toast(error.message)}
 });
 $('#authButton').addEventListener('click',async e=>{
-  if(!identity.user)return $('#loginModal').showModal();
+  if(!identity.user){$('#loginError').hidden=true;return $('#loginModal').showModal()}
   e.currentTarget.disabled=true;
   try{await backend.signOut();identity={user:null,isAdmin:false};renderAccess();toast('已退出管理后台')}catch(error){toast(error.message)}finally{e.currentTarget.disabled=false}
 });
 $('#loginForm').addEventListener('submit',async e=>{
   e.preventDefault();const button=e.currentTarget.querySelector('[type=submit]');button.disabled=true;
+  const errorBox=$('#loginError');errorBox.hidden=true;
   const data=new FormData(e.currentTarget);
   try{
     identity=await backend.signIn(data.get('email').trim(),data.get('password'));
     if(!identity.isAdmin){await backend.signOut();identity={user:null,isAdmin:false};throw new Error('该账号没有管理员权限')}
     e.currentTarget.reset();$('#loginModal').close();renderAccess();toast('管理员登录成功');
-  }catch(error){toast(readableError(error))}finally{button.disabled=false}
+  }catch(error){errorBox.textContent=readableError(error);errorBox.hidden=false}finally{button.disabled=false}
 });
 $('#registerForm').addEventListener('submit',async e=>{
   e.preventDefault();const data=new FormData(e.currentTarget);const name=data.get('name').trim();
@@ -157,10 +158,12 @@ $('#resultForm').addEventListener('submit',async e=>{
 });
 
 function readableError(error){
+  if(!error)return '发生未知错误，请刷新后重试';
   if(error?.code==='23505')return '名称已存在，请更换后重试';
   if(error?.message?.includes('Invalid login'))return '邮箱或密码错误';
   if(error?.message?.toLowerCase().includes('email not confirmed'))return '邮箱尚未确认，请先在 Supabase 确认该用户';
   if(error?.message?.toLowerCase().includes('rate limit'))return '登录尝试过于频繁，请稍后再试';
+  if(error?.message?.toLowerCase().includes('null is not'))return '账号资料读取失败，请刷新页面后重试';
   return error?.message||'操作失败，请稍后重试';
 }
 const localBackend={
