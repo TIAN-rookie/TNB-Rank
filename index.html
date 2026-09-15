@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="TNB Poker Club 积分排行榜与赛事数据中心">
+  <title>TNB Poker Club · 积分天梯</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="noise"></div>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="TNB 首页">
+      <span class="brand-mark">T</span>
+      <span><strong>TNB</strong><small>POKER CLUB</small></span>
+    </a>
+    <nav>
+      <a class="active" href="#leaderboard">积分天梯</a>
+      <a href="#records">巅峰纪录</a>
+      <a href="#players">选手数据</a>
+    </nav>
+    <div class="header-actions">
+      <span id="connectionBadge" class="connection-badge">本地演示</span>
+      <button id="authButton" class="btn ghost">管理员登录</button>
+      <button class="btn ghost admin-only" data-open="registerModal">注册选手</button>
+      <button class="btn primary admin-only" data-open="adminModal"><span>＋</span> 录入赛果</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow"><span></span> <b id="heroSeason">SEASON 2026 · 第 3 赛季</b></p>
+        <h1>牌桌见真章，<br><em>积分铸传奇。</em></h1>
+        <p class="hero-desc">记录每一次对局，见证每一位牌手的成长。<br>数据实时更新，荣誉永不褪色。</p>
+        <div class="hero-stats">
+          <div><strong id="totalPlayers">0</strong><span>注册选手</span></div>
+          <i></i>
+          <div><strong id="totalGames">0</strong><span>累计场次</span></div>
+          <i></i>
+          <div><strong id="totalPoints">0</strong><span>流通积分</span></div>
+        </div>
+      </div>
+      <div class="hero-visual" aria-hidden="true">
+        <div class="card card-back one"><span>T</span></div>
+        <div class="card card-front two"><b>♠</b><strong>A</strong><span>♠</span></div>
+        <div class="card card-front three red"><b>♥</b><strong>K</strong><span>♥</span></div>
+        <div class="chip chip-a">TNB</div><div class="chip chip-b">100</div><div class="chip chip-c">25</div>
+      </div>
+    </section>
+
+    <section class="dashboard-section" id="leaderboard">
+      <div class="section-head">
+        <div><p class="eyebrow">LEADERBOARD</p><h2>赛季积分天梯</h2><p>基于所有已录入赛果的实时排名</p></div>
+        <label class="season-select"><span>赛季</span><select id="seasonFilter" aria-label="选择赛季"><option value="2026-S3">2026 · S3</option><option value="2026-S2">2026 · S2</option><option value="2026-S1">2026 · S1</option><option value="all">全部赛季</option></select></label>
+      </div>
+      <div class="leaderboard-grid">
+        <div class="table-card">
+          <div class="table-toolbar">
+            <label class="search"><span>⌕</span><input id="playerSearch" placeholder="搜索选手…"></label>
+            <span class="updated">● 实时更新</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>排名</th><th>选手</th><th>出勤率</th><th>胜率</th><th>参赛</th><th class="right" id="scoreColumn">赛季总积分</th></tr></thead>
+              <tbody id="leaderboardBody"></tbody>
+            </table>
+          </div>
+          <div class="table-footer"><span id="tableCount"></span><button id="showAllBtn">查看完整榜单 ↓</button></div>
+        </div>
+        <aside class="champion-card" id="championCard"></aside>
+      </div>
+    </section>
+
+    <section class="records-section" id="records">
+      <div class="section-head light"><div><p class="eyebrow">HALL OF FAME</p><h2>巅峰纪录</h2><p>单场比赛中最令人难忘的高光与低谷</p></div><div class="suit">♠</div></div>
+      <div class="record-grid">
+        <article class="record-panel high"><div class="record-title"><span>↗</span><div><p>SINGLE GAME HIGH</p><h3>单局积分 · 最高 TOP 3</h3></div></div><div id="highRecords"></div></article>
+        <article class="record-panel low"><div class="record-title"><span>↘</span><div><p>SINGLE GAME LOW</p><h3>单局积分 · 最低 TOP 3</h3></div></div><div id="lowRecords"></div></article>
+      </div>
+    </section>
+
+    <section class="players-section" id="players">
+      <div class="section-head"><div><p class="eyebrow">PLAYER CARDS</p><h2>选手数据</h2><p>每一次到场，都是通往传奇的一步</p></div><button class="btn outline admin-only" data-open="registerModal">＋ 注册新选手</button></div>
+      <div class="player-grid" id="playerGrid"></div>
+    </section>
+  </main>
+
+  <footer><div class="brand"><span class="brand-mark">T</span><span><strong>TNB</strong><small>POKER CLUB</small></span></div><p>公平竞技 · 以牌会友 · 理性娱乐</p><p>© 2026 TNB Poker Club</p></footer>
+
+  <dialog id="registerModal">
+    <form id="registerForm" method="dialog">
+      <div class="modal-head"><div><p class="eyebrow">NEW MEMBER</p><h2>注册新选手</h2></div><button type="button" class="close" aria-label="关闭">×</button></div>
+      <label>选手昵称<input name="name" required maxlength="12" placeholder="例如：河牌猎手"></label>
+      <label>个性签名<input name="tagline" maxlength="24" placeholder="例如：冷静，是最强的底牌"></label>
+      <label class="avatar-upload">选手头像<div class="upload-box"><span id="avatarPreview" class="avatar preview-avatar">预览</span><div><strong>上传头像</strong><small>支持 JPG、PNG、WebP，建议正方形，最大 5 MB</small></div><input id="avatarInput" name="avatar" type="file" accept="image/jpeg,image/png,image/webp"></div></label>
+      <label>头像颜色<select name="color"><option value="#c73948">勃艮第红</option><option value="#315f59">松石绿</option><option value="#5b4d82">皇家紫</option><option value="#a16b32">琥珀金</option></select></label>
+      <button class="btn primary wide" type="submit">完成注册</button>
+    </form>
+  </dialog>
+
+  <dialog id="loginModal">
+    <form id="loginForm" method="dialog">
+      <div class="modal-head"><div><p class="eyebrow">ADMIN ACCESS</p><h2>管理员登录</h2></div><button type="button" class="close" aria-label="关闭">×</button></div>
+      <p class="login-copy">登录后可注册选手和录入赛果；排行榜始终向所有朋友公开。</p>
+      <label>邮箱<input name="email" type="email" autocomplete="email" required placeholder="admin@example.com"></label>
+      <label>密码<input name="password" type="password" autocomplete="current-password" required minlength="6"></label>
+      <button class="btn primary wide" type="submit">登录管理后台</button>
+    </form>
+  </dialog>
+
+  <dialog id="adminModal">
+    <form id="resultForm" method="dialog">
+      <div class="modal-head"><div><p class="eyebrow">ADMIN CONSOLE</p><h2>录入比赛结果</h2></div><button type="button" class="close" aria-label="关闭">×</button></div>
+      <div class="form-row"><label>比赛日期<input name="date" type="date" required></label><label>所属赛季<select name="season" required><option value="2026-S3">2026 · S3</option><option value="2026-S2">2026 · S2</option><option value="2026-S1">2026 · S1</option></select></label></div>
+      <label>赛事名称<input name="event" required value="周末常规赛"></label>
+      <div class="result-list-head"><span>参赛选手</span><span>本局积分（正/负）</span></div>
+      <div id="resultInputs" class="result-inputs"></div>
+      <p class="form-tip">至少填写两名选手。最高分选手将记为本场胜者。</p>
+      <button class="btn primary wide" type="submit">确认录入并更新榜单</button>
+    </form>
+  </dialog>
+  <div id="toast" role="status"></div>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
