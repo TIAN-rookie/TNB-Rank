@@ -159,6 +159,8 @@ $('#resultForm').addEventListener('submit',async e=>{
 function readableError(error){
   if(error?.code==='23505')return '名称已存在，请更换后重试';
   if(error?.message?.includes('Invalid login'))return '邮箱或密码错误';
+  if(error?.message?.toLowerCase().includes('email not confirmed'))return '邮箱尚未确认，请先在 Supabase 确认该用户';
+  if(error?.message?.toLowerCase().includes('rate limit'))return '登录尝试过于频繁，请稍后再试';
   return error?.message||'操作失败，请稍后重试';
 }
 const localBackend={
